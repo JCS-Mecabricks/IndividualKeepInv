@@ -1,6 +1,5 @@
 package jcsmecabricks.individualkeepinv;
 
-import com.mojang.serialization.Codec;
 import net.fabricmc.fabric.api.networking.v1.PacketSender;
 import net.minecraft.datafixer.DataFixTypes;
 import net.minecraft.entity.player.PlayerEntity;
@@ -9,10 +8,9 @@ import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.world.PersistentState;
 import net.minecraft.world.PersistentStateManager;
-import net.minecraft.world.PersistentStateType;
+import net.minecraft.world.World;
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -21,77 +19,46 @@ import static jcsmecabricks.individualkeepinv.IndividualKeepInv.MOD_ID;
 
 public class KeepInvMap extends PersistentState {
 
-    public final HashMap<UUID, Boolean> invStateMap = new HashMap<>();
+    public HashMap<UUID, Boolean> invStateMap = new HashMap<>();
     public boolean keepInvDefault = false;
+    public static KeepInvMap kim = new KeepInvMap();
 
-    public static KeepInvMap kim;
+    public static boolean getPlayerState (PlayerEntity player) { return kim.invStateMap.get(player.getUuid()); }
+    public static void setPlayerState (PlayerEntity player, boolean bool) { kim.invStateMap.put(player.getUuid(), bool); }
+    public static void setDefaultState (boolean bool) { kim.keepInvDefault = bool; }
 
-    public static boolean getPlayerState(PlayerEntity player) {
-        ensureLoaded(player);
-        return kim.invStateMap.getOrDefault(player.getUuid(), kim.keepInvDefault);
-    }
-
-    public static void setPlayerState(PlayerEntity player, boolean value) {
-        ensureLoaded(player);
-        kim.invStateMap.put(player.getUuid(), value);
-        kim.markDirty();
-    }
-
-    public static void setDefaultState(boolean value) {
-        if (kim != null) {
-            kim.keepInvDefault = value;
-            kim.markDirty();
-        }
-    }
-
-    public NbtCompound writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup lookup) {
-        NbtCompound playersNbt = new NbtCompound();
-        for (var entry : invStateMap.entrySet()) {
-            NbtCompound playerData = new NbtCompound();
-            playerData.putBoolean("invBool", entry.getValue());
-            playersNbt.put(entry.getKey().toString(), playerData);
-        }
-        nbt.put("invStateCompound", playersNbt);
-        nbt.putBoolean("keepInvDefault", keepInvDefault);
+    @Override
+    public NbtCompound writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup wrapperLookup) {
+        NbtCompound playersNbtCompound = new NbtCompound();
+        kim.invStateMap.forEach((UUID, Boolean) -> {
+            NbtCompound pInvStateNbt = new NbtCompound();
+            pInvStateNbt.putBoolean("invBool", kim.invStateMap.get(UUID));
+            playersNbtCompound.put(String.valueOf(UUID), pInvStateNbt);
+        });
+        nbt.put("invStateCompound", playersNbtCompound);
+        nbt.putBoolean("keepInvDefault", kim.keepInvDefault);
         return nbt;
     }
 
-    public static KeepInvMap fromNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup lookup) {
-        KeepInvMap map = new KeepInvMap();
-        NbtCompound compound = nbt.getCompound("invStateCompound").get();
-
-        for (String key : compound.getKeys()) {
+    public static KeepInvMap createFromNbt (NbtCompound nbt, RegistryWrapper.WrapperLookup wrapperLookup) {
+        NbtCompound nbt1 = nbt.getCompound("invStateCompound");
+        for (String key : nbt1.getKeys()) {
+            boolean keepInvBool = nbt1.getCompound(key).getBoolean("invBool");
             UUID uuid = UUID.fromString(key);
-            boolean keepInv = compound.getCompound(key).flatMap(nbt1 -> nbt.getBoolean("invBool")).orElse(false);
-            map.invStateMap.put(uuid, keepInv);
+            kim.invStateMap.put(uuid,keepInvBool);
         }
-
-        map.keepInvDefault = nbt.getBoolean("keepInvDefault").get();
-        return map;
+        kim.keepInvDefault = nbt.getBoolean("keepInvDefault");
+        kim.markDirty();
+        return kim;
     }
 
-    public static final PersistentStateType<KeepInvMap> TYPE =
-            new PersistentStateType<>(
-                    MOD_ID,
-                    ctx -> new KeepInvMap(),
-                    ctx -> Codec.unit(new KeepInvMap()),
-                    DataFixTypes.PLAYER
-            );
-
-
-    public static KeepInvMap get(ServerWorld world) {
-        return world.getPersistentStateManager().getOrCreate(TYPE);
-    }
-
-
-    private static void ensureLoaded(PlayerEntity player) {
-        if (kim == null && player.getWorld() instanceof ServerWorld serverWorld) {
-            get(serverWorld);
-        }
+    public static KeepInvMap getInvStates(MinecraftServer server) {
+        PersistentStateManager psm = server.getWorld(World.OVERWORLD).getPersistentStateManager();
+        return psm.getOrCreate(new Type<>(KeepInvMap::new, KeepInvMap::createFromNbt, DataFixTypes.PLAYER), MOD_ID);
     }
 
     public static void onJoin(ServerPlayNetworkHandler handler, PacketSender sender, MinecraftServer server) {
-        kim = get(server.getOverworld());
+        kim = KeepInvMap.getInvStates(handler.player.getWorld().getServer());
 
         if (!kim.invStateMap.containsKey(handler.player.getUuid())) {
             kim.invStateMap.put(handler.player.getUuid(), kim.keepInvDefault);
@@ -100,13 +67,11 @@ public class KeepInvMap extends PersistentState {
     }
 
     public static void onRespawn(ServerPlayerEntity oldPlayer, ServerPlayerEntity newPlayer, boolean alive) {
-        ensureLoaded(newPlayer);
-        boolean keepInv = kim.invStateMap.getOrDefault(oldPlayer.getUuid(), kim.keepInvDefault);
-
-        if (!alive && keepInv) {
+        if (!alive && kim.invStateMap.get(oldPlayer.getUuid())) {
             newPlayer.copyFrom(oldPlayer, true);
             newPlayer.setHealth(20.0f);
-        } else if (!alive) {
+        }
+        if (!alive && !kim.invStateMap.get(oldPlayer.getUuid())) {
             newPlayer.experienceLevel = 0;
             newPlayer.totalExperience = 0;
             newPlayer.experienceProgress = 0.0f;
