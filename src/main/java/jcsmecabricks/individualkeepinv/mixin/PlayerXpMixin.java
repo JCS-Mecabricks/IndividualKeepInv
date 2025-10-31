@@ -11,8 +11,8 @@ import static jcsmecabricks.individualkeepinv.KeepInvMap.kim;
 @Mixin(PlayerEntity.class)
 public abstract class PlayerXpMixin {
 
-    @Inject(method = "getExperienceToDrop", at = @At("HEAD"), cancellable = true)
-    public void ongetExperienceToDrop(CallbackInfoReturnable<Integer> info) {
+    @Inject(method = "getXpToDrop", at = @At("HEAD"), cancellable = true)
+    public void ongetXpToDrop(CallbackInfoReturnable<Integer> info) {
         PlayerEntity player = ((PlayerEntity) (Object) this);
         if (kim.invStateMap.get(player.getUuid()) || player.isSpectator()) {
             info.setReturnValue(0);
