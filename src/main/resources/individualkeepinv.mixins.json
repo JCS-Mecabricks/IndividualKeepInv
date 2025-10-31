@@ -1,0 +1,12 @@
+{
+	"required": true,
+	"package": "jcsmecabricks.individualkeepinv.mixin",
+	"compatibilityLevel": "JAVA_17",
+	"mixins": [
+		"PlayerDeathMixin",
+		"PlayerXpMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
