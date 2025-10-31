@@ -85,7 +85,7 @@ public class KeepInvMap extends PersistentState {
 
 
     private static void ensureLoaded(PlayerEntity player) {
-        if (kim == null && player.getEntityWorld() instanceof ServerWorld serverWorld) {
+        if (kim == null && player.getWorld() instanceof ServerWorld serverWorld) {
             get(serverWorld);
         }
     }
