@@ -8,8 +8,8 @@
 		"JCS"
 	],
 	"contact": {
-		"homepage": "https://github.com/rosecat-dev",
-		"sources": "https://github.com/rosecat-dev/IndividualKeepInv/"
+		"homepage": "https://github.com/JCS-Mecabricks",
+		"sources": "https://github.com/JCS-Mecabricks/IndividualKeepInv"
 	},
 	"license": "MIT",
 	"icon": "assets/individualkeepinv/icon.png",
@@ -23,8 +23,8 @@
 		"individualkeepinv.mixins.json"
 	],
 	"depends": {
-		"fabricloader": ">=0.15.7",
-		"minecraft": "~1.21",
+		"fabricloader": ">=0.17.3",
+		"minecraft": "~1.21.10",
 		"java": ">=17",
 		"fabric-api": "*"
 	},
