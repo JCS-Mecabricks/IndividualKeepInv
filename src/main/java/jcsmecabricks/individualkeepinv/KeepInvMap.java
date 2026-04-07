@@ -3,15 +3,15 @@ package jcsmecabricks.individualkeepinv;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.fabricmc.fabric.api.networking.v1.PacketSender;
-import net.minecraft.datafixer.DataFixTypes;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayNetworkHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.world.PersistentState;
-import net.minecraft.world.PersistentStateType;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.util.datafix.DataFixTypes;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.saveddata.SavedDataType;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 
 import static jcsmecabricks.individualkeepinv.IndividualKeepInv.MOD_ID;
 
-public class KeepInvMap extends PersistentState {
+public class KeepInvMap extends SavedData {
     public final HashMap<UUID, Boolean> invStateMap = new HashMap<>();
     public boolean keepInvDefault = false;
 
@@ -41,55 +41,55 @@ public class KeepInvMap extends PersistentState {
             })
     );
 
-    public static final PersistentStateType<KeepInvMap> TYPE = new PersistentStateType<>(MOD_ID, KeepInvMap::new, CODEC, DataFixTypes.PLAYER);
+    public static final SavedDataType<KeepInvMap> TYPE = new SavedDataType<>(Identifier.fromNamespaceAndPath(MOD_ID, "keepinv"), KeepInvMap::new, CODEC, DataFixTypes.PLAYER);
 
     public KeepInvMap() {}
 
     // --- Utility methods ---
-    public static KeepInvMap get(ServerWorld world) {
-        kim = world.getPersistentStateManager().getOrCreate(TYPE);
+    public static KeepInvMap get(ServerLevel world) {
+        kim = world.getDataStorage().computeIfAbsent(TYPE);
         return kim;
     }
 
-    private static void ensureLoaded(PlayerEntity player) {
-        if (kim == null && player.getEntityWorld() instanceof ServerWorld serverWorld) {
+    private static void ensureLoaded(Player player) {
+        if (kim == null && player.level() instanceof ServerLevel serverWorld) {
             get(serverWorld);
         }
     }
 
-    public static boolean getPlayerState(PlayerEntity player) {
+    public static boolean getPlayerState(Player player) {
         ensureLoaded(player);
-        return kim.invStateMap.getOrDefault(player.getUuid(), kim.keepInvDefault);
+        return kim.invStateMap.getOrDefault(player.getUUID(), kim.keepInvDefault);
     }
 
-    public static void setPlayerState(PlayerEntity player, boolean value) {
+    public static void setPlayerState(Player player, boolean value) {
         ensureLoaded(player);
-        kim.invStateMap.put(player.getUuid(), value);
-        kim.markDirty();
+        kim.invStateMap.put(player.getUUID(), value);
+        kim.setDirty();
     }
 
     public static void setDefaultState(boolean value) {
         if (kim != null) {
             kim.keepInvDefault = value;
-            kim.markDirty();
+            kim.setDirty();
         }
     }
 
-    public static void onJoin(ServerPlayNetworkHandler handler, PacketSender sender, MinecraftServer server) {
-        kim = get(server.getOverworld());
-        UUID uuid = handler.player.getUuid();
+    public static void onJoin(ServerGamePacketListenerImpl handler, PacketSender sender, MinecraftServer server) {
+        kim = get(server.overworld());
+        UUID uuid = handler.player.getUUID();
         if (!kim.invStateMap.containsKey(uuid)) {
             kim.invStateMap.put(uuid, kim.keepInvDefault);
-            kim.markDirty();
+            kim.setDirty();
         }
     }
 
-    public static void onRespawn(ServerPlayerEntity oldPlayer, ServerPlayerEntity newPlayer, boolean alive) {
+    public static void onRespawn(ServerPlayer oldPlayer, ServerPlayer newPlayer, boolean alive) {
         ensureLoaded(newPlayer);
-        boolean keepInv = kim.invStateMap.getOrDefault(oldPlayer.getUuid(), kim.keepInvDefault);
+        boolean keepInv = kim.invStateMap.getOrDefault(oldPlayer.getUUID(), kim.keepInvDefault);
 
         if (!alive && keepInv) {
-            newPlayer.copyFrom(oldPlayer, true);
+            newPlayer.restoreFrom(oldPlayer, true);
             newPlayer.setHealth(20.0f);
         } else if (!alive) {
             newPlayer.experienceLevel = 0;
