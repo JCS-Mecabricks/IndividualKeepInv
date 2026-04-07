@@ -20,10 +20,10 @@ public class IKeepInvCommand {
 
                 .then(literal("getdefault")
                         .requires (source -> source.getPermissions().hasPermission(Permission.Atom.ofVanilla("command/level/2")))
-                                .executes(ctx -> {
-                                    ctx.getSource().sendMessage(Text.of("The current default state is: " + kim.keepInvDefault));
-                                    return 1;
-                                }))
+                        .executes(ctx -> {
+                            ctx.getSource().sendMessage(Text.of("The current default state is: " + kim.keepInvDefault));
+                            return 1;
+                        }))
 
                 .then(literal("default")
                         .requires (source -> source.getPermissions().hasPermission(Permission.Atom.ofVanilla("command/level/2")))
@@ -35,41 +35,41 @@ public class IKeepInvCommand {
                                     return 1;
                                 })))
 
-            .then(literal("get")
-                    .then(CommandManager.argument("target", EntityArgumentType.player())
-                            .requires(source -> source.getPermissions().hasPermission(Permission.Atom.ofVanilla("command/level/0")))
-                            .executes(ctx -> {
-                                ServerPlayerEntity player = EntityArgumentType.getPlayer(ctx, "target");
-                                if (ctx.getSource().getPermissions().hasPermission(Permission.Atom.ofVanilla("command/level/2"))) {  // hasPermissionLevel also works for permission levels above specified, so this works for permission level 4 as well
-                                    ctx.getSource().sendMessage(Text.of(player.getName().getString() + "'s inventory state is currently: " + KeepInvMap.getPlayerState(player)));
-                                }
-                                else if (player.equals(ctx.getSource().getPlayer())) { // checks if player executing command is the same as the player passed to the command
-                                    ctx.getSource().sendMessage(Text.of(player.getName().getString() + "'s inventory state is currently: " + KeepInvMap.getPlayerState(player)));
-                                }
-                                else {
-                                    ctx.getSource().sendError(Text.of("Non-OP players cannot view other player's inventory states."));
-                                }
-                                return 1;
-                            })))
+                .then(literal("get")
+                        .then(CommandManager.argument("target", EntityArgumentType.player())
+                                .requires(source -> source.getPermissions().hasPermission(Permission.Atom.ofVanilla("command/level/0")))
+                                .executes(ctx -> {
+                                    ServerPlayerEntity player = EntityArgumentType.getPlayer(ctx, "target");
+                                    if (ctx.getSource().getPermissions().hasPermission(Permission.Atom.ofVanilla("command/level/2"))) {  // hasPermissionLevel also works for permission levels above specified, so this works for permission level 4 as well
+                                        ctx.getSource().sendMessage(Text.of(player.getName().getString() + "'s inventory state is currently: " + KeepInvMap.getPlayerState(player)));
+                                    }
+                                    else if (player.equals(ctx.getSource().getPlayer())) { // checks if player executing command is the same as the player passed to the command
+                                        ctx.getSource().sendMessage(Text.of(player.getName().getString() + "'s inventory state is currently: " + KeepInvMap.getPlayerState(player)));
+                                    }
+                                    else {
+                                        ctx.getSource().sendError(Text.of("Non-OP players cannot view other player's inventory states."));
+                                    }
+                                    return 1;
+                                })))
 
-            .then(literal("set")
-                    .then(CommandManager.argument("target", EntityArgumentType.player())
-                            .then(CommandManager.argument("boolean", BoolArgumentType.bool())
-                                    .executes(ctx -> {
-                                        ServerPlayerEntity player = EntityArgumentType.getPlayer(ctx, "target");
-                                        boolean bool = BoolArgumentType.getBool(ctx, "boolean");
-                                        if (ctx.getSource().getPermissions().hasPermission(Permission.Atom.ofVanilla("command/level/2"))) {  // hasPermissionLevel also works for permission levels above specified, so this works for permission level 4 as well
-                                            KeepInvMap.setPlayerState(player, bool);
-                                            ctx.getSource().sendMessage(Text.of(player.getName().getString() + "'s inventory state has been set to: " + bool));
-                                        }
-                                        else if (player.equals(ctx.getSource().getPlayer())) { // checks if player executing command is the same as the player passed to the command
-                                            KeepInvMap.setPlayerState(player, bool);
-                                            ctx.getSource().sendMessage(Text.of(player.getName().getString() + "'s inventory state has been set to: " + bool));
-                                        }
-                                        else {
-                                            ctx.getSource().sendError(Text.of("Non-OP players cannot alter other player's inventory states."));
-                                        }
-                                        return 1;
-                                    })))));
+                .then(literal("set")
+                        .then(CommandManager.argument("target", EntityArgumentType.player())
+                                .then(CommandManager.argument("boolean", BoolArgumentType.bool())
+                                        .executes(ctx -> {
+                                            ServerPlayerEntity player = EntityArgumentType.getPlayer(ctx, "target");
+                                            boolean bool = BoolArgumentType.getBool(ctx, "boolean");
+                                            if (ctx.getSource().getPermissions().hasPermission(Permission.Atom.ofVanilla("command/level/2"))) {  // hasPermissionLevel also works for permission levels above specified, so this works for permission level 4 as well
+                                                KeepInvMap.setPlayerState(player, bool);
+                                                ctx.getSource().sendMessage(Text.of(player.getName().getString() + "'s inventory state has been set to: " + bool));
+                                            }
+                                            else if (player.equals(ctx.getSource().getPlayer())) { // checks if player executing command is the same as the player passed to the command
+                                                KeepInvMap.setPlayerState(player, bool);
+                                                ctx.getSource().sendMessage(Text.of(player.getName().getString() + "'s inventory state has been set to: " + bool));
+                                            }
+                                            else {
+                                                ctx.getSource().sendError(Text.of("Non-OP players cannot alter other player's inventory states."));
+                                            }
+                                            return 1;
+                                        })))));
     }
 }
